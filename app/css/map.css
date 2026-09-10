@@ -1,0 +1,367 @@
+/* ============================================================
+   THE PREPARATION MAP
+   A pan/zoom SVG atlas. Geometry scales with the camera; labels
+   counter-scale so they stay legible at any zoom level.
+   ============================================================ */
+
+.map-root {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 8%, hsl(var(--accent-h) 60% 40% / 0.10), transparent 62%),
+    radial-gradient(90% 70% at 8% 96%, hsl(var(--h-data) 60% 40% / 0.07), transparent 60%),
+    radial-gradient(90% 70% at 96% 92%, hsl(var(--h-evaluation) 60% 40% / 0.06), transparent 60%),
+    var(--bg-void);
+  cursor: grab;
+  touch-action: none;
+  --k: 1;
+}
+.map-root.is-panning { cursor: grabbing; }
+.map-root::after {
+  /* vignette so the edges of the world fall away rather than stopping flat */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 50%, transparent 46%, hsl(222 45% 3% / 0.55) 100%);
+  z-index: 2;
+}
+:root[data-theme="light"] .map-root::after {
+  background: radial-gradient(120% 100% at 50% 50%, transparent 50%, hsl(40 20% 80% / 0.4) 100%);
+}
+
+.map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ---------- Star / grid field ---------- */
+.map-grid { pointer-events: none; }
+.map-stars circle { fill: var(--star); }
+
+/* ---------- Cluster halos ---------- */
+.halo {
+  fill: hsl(var(--track-h) var(--sat) var(--lum) / 0.045);
+  stroke: hsl(var(--track-h) var(--sat) var(--lum) / 0.10);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: opacity var(--t-mid) var(--ease), fill var(--t-mid) var(--ease);
+}
+.halo.is-dim { opacity: 0.25; }
+.halo.is-lit { fill: hsl(var(--track-h) var(--sat) var(--lum) / 0.10); }
+
+/* ---------- Edges ---------- */
+.artery {
+  fill: none;
+  stroke: var(--edge);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease);
+}
+.artery.is-lit { stroke: var(--accent); opacity: 0.9; }
+
+.edge {
+  fill: none;
+  stroke: var(--edge);
+  stroke-width: 1;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease),
+              stroke-width var(--t-mid) var(--ease);
+}
+.edge.is-related { stroke-dasharray: 3 4; opacity: 0.7; }
+.edge.is-dim { opacity: 0.16; }
+.edge.is-in {
+  stroke: hsl(var(--h-learning) 84% var(--lum));
+  stroke-width: 1.9; opacity: 1;
+}
+.edge.is-out {
+  stroke: var(--accent);
+  stroke-width: 1.9; opacity: 1;
+}
+.edge.is-out.is-flowing { stroke-dasharray: 5 7; animation: flow 900ms linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -12; } }
+
+/* ---------- Nodes ---------- */
+.node { cursor: pointer; }
+.node .n-hit { fill: transparent; }
+
+/* Topic node */
+.t-ring {
+  fill: var(--node-fill);
+  stroke: hsl(var(--track-h) var(--sat) var(--lum) / 0.55);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  transition: fill var(--t-mid) var(--ease), stroke var(--t-mid) var(--ease), r var(--t-mid) var(--ease);
+}
+.t-core {
+  fill: hsl(var(--status-h) var(--status-s) var(--lum));
+  transition: fill var(--t-mid) var(--ease), r var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease);
+}
+.node[data-status="not-started"] .t-core { opacity: 0.22; }
+
+.node-topic:hover .t-ring { stroke-width: 2.4; fill: var(--node-fill-hi); }
+.node-topic.is-lit .t-ring { stroke: hsl(var(--track-h) var(--sat) var(--lum)); stroke-width: 2.2; }
+.node-topic.is-current .t-ring {
+  stroke: var(--accent); stroke-width: 2.6;
+  filter: drop-shadow(0 0 6px var(--accent-glow));
+}
+.node.is-dim { opacity: 0.14; pointer-events: none; }
+.node.is-hidden { display: none; }
+
+/* Pulse for the currently open topic */
+.you-pulse {
+  fill: none; stroke: var(--accent); stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  transform-origin: center; transform-box: fill-box;
+  animation: pulse 2.4s var(--ease-out) infinite;
+}
+@keyframes pulse {
+  0%   { r: 12; opacity: 0.75; }
+  70%  { r: 34; opacity: 0; }
+  100% { r: 34; opacity: 0; }
+}
+
+/* Hub node */
+.h-glow { fill: hsl(var(--track-h) var(--sat) var(--lum) / 0.14); transition: fill var(--t-mid) var(--ease); }
+.h-disc {
+  fill: var(--surface-1);
+  stroke: hsl(var(--track-h) var(--sat) var(--lum) / 0.7);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  transition: stroke-width var(--t-mid) var(--ease), fill var(--t-mid) var(--ease);
+}
+.h-arc {
+  fill: none;
+  stroke: hsl(var(--track-h) var(--sat) var(--lum));
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  transition: stroke-dashoffset var(--t-slow) var(--ease-out);
+}
+.h-arc-track { fill: none; stroke: var(--line); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.h-mark { fill: hsl(var(--track-h) var(--sat) var(--lum)); font-weight: 700; }
+.node-hub:hover .h-disc { stroke-width: 2.6; fill: var(--surface-2); }
+.node-hub:hover .h-glow { fill: hsl(var(--track-h) var(--sat) var(--lum) / 0.24); }
+
+/* ---------- Labels (counter-scaled to stay legible) ---------- */
+.n-label {
+  font-family: var(--font-sans);
+  fill: var(--text-mid);
+  text-anchor: middle;
+  pointer-events: none;
+  paint-order: stroke fill;
+  stroke: var(--bg-void);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  transition: fill var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease);
+}
+/* Label offsets counter-scale with the font. The `y` attribute anchors each
+   label at the node's edge; this transform pushes it down by a constant
+   *screen* distance, so labels never collide with the disc or with each
+   other as the camera zooms out. */
+.t-label {
+  font-size: calc(11px / var(--k));
+  transform: translateY(calc(13px / var(--k)));
+}
+.node-topic:hover .t-label,
+.node-topic.is-lit .t-label { fill: var(--text-hi); }
+.node-topic.is-current .t-label { fill: var(--accent); font-weight: 650; }
+
+.h-label {
+  font-size: calc(13.5px / var(--k));
+  font-weight: 660;
+  fill: var(--text-hi);
+  letter-spacing: calc(0.2px / var(--k));
+  transform: translateY(calc(21px / var(--k)));
+}
+.h-sublabel {
+  font-size: calc(9.5px / var(--k));
+  fill: var(--text-faint);
+  font-weight: 500;
+  transform: translateY(calc(34px / var(--k)));
+}
+
+/* Zoom-gated layers */
+.map-root[data-detail="far"]  .layer-topics,
+.map-root[data-detail="far"]  .layer-edges { opacity: 0; pointer-events: none; }
+.map-root[data-detail="mid"]  .layer-topics .t-label { opacity: 0; }
+.map-root[data-detail="mid"]  .layer-edges { opacity: 0.5; }
+.map-root[data-detail="near"] .layer-arteries { opacity: 0.28; }
+.map-root[data-detail="near"] .h-sublabel { opacity: 1; }
+.layer-topics, .layer-edges, .layer-arteries { transition: opacity var(--t-mid) var(--ease); }
+
+/* ============ HUD ============ */
+.map-hud { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.map-hud > * { pointer-events: auto; }
+
+.hud-panel {
+  position: absolute;
+  background: hsl(from var(--surface-1) h s l / 0.86);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+@supports not (background: hsl(from red h s l / 0.5)) {
+  .hud-panel { background: var(--surface-1); }
+}
+
+/* ---- Filter bar (top-left) ---- */
+.hud-filters {
+  top: var(--sp-4); left: var(--sp-4);
+  max-width: min(560px, calc(100% - 2 * var(--sp-4)));
+  padding: var(--sp-3);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+}
+.hud-filters .hf-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.hud-filters .hf-label {
+  font-family: var(--font-sans); font-size: var(--fs-2xs); font-weight: 600;
+  letter-spacing: var(--tracking-caps); text-transform: uppercase;
+  color: var(--text-faint); margin-right: 2px; width: 100%;
+}
+.hud-filters.is-collapsed .hf-body { display: none; }
+.hf-head { display: flex; align-items: center; gap: var(--sp-2); }
+.hf-head .hf-title {
+  font-family: var(--font-sans); font-size: var(--fs-xs); font-weight: 620; color: var(--text-hi);
+  flex: 1;
+}
+.hf-head button { color: var(--text-low); display: grid; place-items: center; width: 22px; height: 22px;
+  border-radius: var(--r-sm); }
+.hf-head button:hover { background: var(--surface-3); color: var(--text-hi); }
+.hf-head svg { width: 15px; height: 15px; transition: transform var(--t-mid) var(--ease); }
+.hud-filters.is-collapsed .hf-head svg { transform: rotate(-90deg); }
+
+/* ---- Legend (bottom-left) ---- */
+.hud-legend {
+  bottom: var(--sp-4); left: var(--sp-4);
+  padding: 9px var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
+  max-width: min(660px, calc(100% - 420px));
+  font-size: var(--fs-xs);
+}
+.hud-legend .lg-title {
+  font-family: var(--font-sans); font-size: var(--fs-2xs); font-weight: 600;
+  letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-faint);
+  width: 100%;
+}
+.hud-legend .lg-row { display: flex; align-items: center; gap: 6px; color: var(--text-mid); white-space: nowrap; }
+.hud-legend .lg-dot { width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: hsl(var(--status-h) var(--status-s) var(--lum)); }
+.hud-legend .lg-dot.is-empty { background: transparent; border: 1.5px solid var(--line-strong); }
+.hud-legend .lg-line { width: 16px; height: 0; border-top: 1.6px solid var(--edge); flex: none; }
+.hud-legend .lg-line.is-dash { border-top-style: dashed; }
+
+/* ---- Camera controls (bottom-right) ---- */
+.hud-controls {
+  bottom: var(--sp-4); right: var(--sp-4);
+  display: flex; flex-direction: column; padding: 4px; gap: 2px;
+}
+.hud-controls button {
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: var(--r-sm); color: var(--text-low);
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.hud-controls button:hover { background: var(--surface-3); color: var(--text-hi); }
+.hud-controls svg { width: 15px; height: 15px; }
+.hud-controls .hc-zoom {
+  font-family: var(--font-mono); font-size: 9px; color: var(--text-faint);
+  text-align: center; padding: 2px 0 3px; letter-spacing: 0.02em;
+}
+
+/* ---- Stats strip (top-right) ---- */
+.hud-stats {
+  top: var(--sp-4); right: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex; gap: var(--sp-5); align-items: center;
+}
+.hud-stats .hs-item { display: grid; gap: 1px; justify-items: center; }
+.hud-stats .hs-num {
+  font-family: var(--font-sans); font-size: var(--fs-lg); font-weight: 680;
+  color: var(--text-hi); letter-spacing: -0.03em; line-height: 1;
+}
+.hud-stats .hs-lab {
+  font-family: var(--font-sans); font-size: 9.5px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.hud-stats .hs-sep { width: 1px; align-self: stretch; background: var(--line-faint); }
+
+/* ---- Hover card ---- */
+.map-tip {
+  position: absolute; z-index: 6;
+  width: 290px; padding: var(--sp-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  opacity: 0; transform: translateY(4px);
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.map-tip.is-on { opacity: 1; transform: translateY(0); }
+.map-tip .mt-top { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.map-tip .mt-track {
+  font-family: var(--font-sans); font-size: var(--fs-2xs); font-weight: 620;
+  letter-spacing: 0.09em; text-transform: uppercase; color: var(--track);
+}
+.map-tip .mt-title { font-family: var(--font-sans); font-size: var(--fs-md); font-weight: 640;
+  color: var(--text-hi); line-height: var(--lh-tight); margin-bottom: 6px; }
+.map-tip .mt-blurb { font-size: var(--fs-xs); color: var(--text-mid); line-height: 1.5; }
+.map-tip .mt-meta {
+  margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line-faint);
+  display: grid; gap: 5px;
+}
+.map-tip .mt-line { display: flex; gap: var(--sp-2); font-size: var(--fs-2xs); line-height: 1.45; }
+.map-tip .mt-line .mt-key {
+  color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 600; flex: none; width: 58px;
+}
+.map-tip .mt-line .mt-val { color: var(--text-mid); }
+.map-tip .mt-hint { margin-top: var(--sp-3); font-size: var(--fs-2xs); color: var(--text-faint); }
+
+/* ---- Minimap ---- */
+.hud-minimap {
+  bottom: var(--sp-4); right: calc(var(--sp-4) + 46px);
+  width: 168px; height: 108px; padding: 6px;
+  overflow: hidden; cursor: pointer;
+}
+.hud-minimap svg { width: 100%; height: 100%; display: block; }
+.hud-minimap .mm-dot { fill: hsl(var(--track-h) var(--sat) var(--lum) / 0.85); }
+.hud-minimap .mm-view {
+  fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---- "You are here" trail ---- */
+.hud-trail {
+  /* Clears the legend on the left and the minimap/controls on the right. */
+  bottom: var(--sp-4); left: calc(var(--sp-4) + 186px);
+  max-width: min(620px, calc(100% - 420px));
+  padding: var(--sp-3) var(--sp-4);
+  display: none;
+}
+.hud-trail.is-on { display: block; }
+.hud-trail .tr-title {
+  font-family: var(--font-sans); font-size: var(--fs-2xs); font-weight: 600;
+  letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--accent);
+  margin-bottom: var(--sp-2);
+}
+.hud-trail .tr-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.hud-trail .tr-step {
+  font-family: var(--font-sans); font-size: var(--fs-xs); color: var(--text-mid);
+  padding: 2px 7px; border-radius: var(--r-full); background: var(--surface-2);
+  border: 1px solid transparent; transition: all var(--t-fast) var(--ease);
+}
+.hud-trail .tr-step:hover { color: var(--text-hi); border-color: var(--line); }
+.hud-trail .tr-step.is-here {
+  background: var(--accent-soft); color: var(--accent);
+  border-color: hsl(var(--accent-h) 80% 60% / 0.4); font-weight: 620;
+}
+.hud-trail .tr-arrow { color: var(--text-faint); font-size: 10px; }
+
+/* ---- Responsive HUD ---- */
+@media (max-width: 900px) {
+  .hud-stats { display: none; }
+  .hud-minimap { display: none; }
+  .hud-legend { display: none; }
+  .hud-trail { bottom: var(--sp-4); left: var(--sp-4); max-width: calc(100% - 2 * var(--sp-4)); }
+  .hud-filters { max-width: calc(100% - 2 * var(--sp-4)); }
+}
+@media (max-width: 620px) {
+  .map-tip { width: 240px; }
+}

@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------
+# Secrets - never commit. Broad by design: a miss here is a
+# credential leak, not a tidiness problem.
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+.netrc
+.npmrc
+secrets/
+credentials*
+*credential*
+*secret*
+id_rsa*
+*.token
+config.local.js
+js/config.local.js
+
+# Dependencies
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Personal exports / local progress
+*-progress-*.json
+
+# OS / editor noise
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*~
+*.tmp
+~WRL*.tmp

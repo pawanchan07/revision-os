@@ -1,0 +1,207 @@
+/* ============================================================
+   PREPARATION MAP — DESIGN TOKENS
+   Visual identity: "interactive technical atlas / observatory"
+   Dark-first, layered surfaces, chromatic track identifiers.
+   ============================================================ */
+
+:root {
+  /* ---- Typography ------------------------------------------------ */
+  --font-sans: "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui,
+               -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-text: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui,
+               -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas,
+               "JetBrains Mono", "SF Mono", Menlo, monospace;
+
+  --fs-2xs: 0.6875rem;   /* 11 */
+  --fs-xs:  0.75rem;     /* 12 */
+  --fs-sm:  0.8125rem;   /* 13 */
+  --fs-md:  0.9375rem;   /* 15 */
+  --fs-lg:  1.0625rem;   /* 17 */
+  --fs-xl:  1.375rem;    /* 22 */
+  --fs-2xl: 1.875rem;    /* 30 */
+  --fs-3xl: 2.5rem;      /* 40 */
+
+  --lh-tight: 1.18;
+  --lh-snug: 1.4;
+  --lh-body: 1.68;
+
+  --tracking-caps: 0.14em;
+  --tracking-tight: -0.018em;
+
+  /* ---- Space / radius -------------------------------------------- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 44px; --sp-9: 64px;
+
+  --r-xs: 4px; --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 999px;
+
+  /* ---- Motion ----------------------------------------------------- */
+  --ease: cubic-bezier(0.22, 0.72, 0.24, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 120ms;
+  --t-mid: 220ms;
+  --t-slow: 420ms;
+
+  /* ---- Layout ----------------------------------------------------- */
+  --rail-w: 60px;
+  --topbar-h: 56px;
+  --panel-w: min(560px, 46vw);
+  --z-canvas: 1;
+  --z-hud: 20;
+  --z-panel: 40;
+  --z-topbar: 50;
+  --z-overlay: 80;
+  --z-toast: 90;
+
+  /* ---- Track hues (chromatic identity per knowledge track) -------- */
+  --h-ai: 264;
+  --h-programming: 191;
+  --h-data: 168;
+  --h-product: 38;
+  --h-strategy: 341;
+  --h-business: 18;
+  --h-economics: 92;
+  --h-tools: 213;
+  --h-evaluation: 305;
+  --h-production: 146;
+
+  /* ---- Status hues ------------------------------------------------ */
+  --h-not-started: 220;
+  --h-learning: 205;
+  --h-review: 40;
+  --h-completed: 152;
+  --h-mastered: 275;
+}
+
+/* ================= DARK (default) ================= */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-void: hsl(222 40% 3.5%);
+  --bg-deep: hsl(222 34% 5%);
+  --bg-app: hsl(222 30% 6.5%);
+  --surface-1: hsl(222 26% 9%);
+  --surface-2: hsl(222 24% 11.5%);
+  --surface-3: hsl(222 22% 15%);
+  --surface-raised: hsl(222 26% 10.5%);
+
+  --line-faint: hsl(222 30% 100% / 0.055);
+  --line: hsl(222 30% 100% / 0.10);
+  --line-strong: hsl(222 30% 100% / 0.18);
+
+  --text-hi: hsl(220 30% 96%);
+  --text: hsl(220 18% 84%);
+  --text-mid: hsl(220 14% 66%);
+  --text-low: hsl(220 12% 50%);
+  --text-faint: hsl(220 12% 38%);
+
+  --accent-h: 258;
+  --accent: hsl(258 92% 72%);
+  --accent-dim: hsl(258 60% 58%);
+  --accent-soft: hsl(258 92% 72% / 0.14);
+  --accent-glow: hsl(258 92% 72% / 0.42);
+  --accent-contrast: hsl(258 60% 8%);
+
+  --sat: 78%;      /* track chroma saturation */
+  --lum: 66%;      /* track chroma lightness  */
+  --sat-soft: 60%;
+  --lum-soft: 22%;
+
+  --grid-line: hsl(222 40% 100% / 0.028);
+  --star: hsl(220 60% 100% / 0.30);
+
+  --edge: hsl(220 30% 100% / 0.11);
+  --edge-active: var(--accent);
+  --node-fill: hsl(222 26% 12%);
+  --node-fill-hi: hsl(222 26% 17%);
+
+  --shadow-sm: 0 1px 2px hsl(222 60% 2% / 0.5);
+  --shadow-md: 0 6px 20px -6px hsl(222 60% 2% / 0.7);
+  --shadow-lg: 0 24px 60px -18px hsl(222 60% 2% / 0.85);
+  --shadow-panel: -24px 0 60px -20px hsl(222 60% 2% / 0.7);
+
+  --scrim: hsl(222 40% 3% / 0.62);
+  --code-bg: hsl(222 30% 7.5%);
+}
+
+/* ================= LIGHT ================= */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-void: hsl(40 22% 95%);
+  --bg-deep: hsl(40 20% 96.5%);
+  --bg-app: hsl(40 24% 97.5%);
+  --surface-1: hsl(40 30% 99%);
+  --surface-2: hsl(40 22% 96%);
+  --surface-3: hsl(40 18% 92%);
+  --surface-raised: hsl(0 0% 100%);
+
+  --line-faint: hsl(222 30% 12% / 0.07);
+  --line: hsl(222 30% 12% / 0.13);
+  --line-strong: hsl(222 30% 12% / 0.24);
+
+  --text-hi: hsl(222 34% 11%);
+  --text: hsl(222 20% 22%);
+  --text-mid: hsl(222 14% 40%);
+  --text-low: hsl(222 12% 52%);
+  --text-faint: hsl(222 10% 64%);
+
+  --accent-h: 258;
+  --accent: hsl(258 72% 52%);
+  --accent-dim: hsl(258 52% 62%);
+  --accent-soft: hsl(258 82% 52% / 0.10);
+  --accent-glow: hsl(258 82% 52% / 0.28);
+  --accent-contrast: hsl(0 0% 100%);
+
+  --sat: 62%;
+  --lum: 42%;
+  --sat-soft: 70%;
+  --lum-soft: 92%;
+
+  --grid-line: hsl(222 40% 12% / 0.045);
+  --star: hsl(222 40% 20% / 0.22);
+
+  --edge: hsl(222 30% 12% / 0.16);
+  --edge-active: var(--accent);
+  --node-fill: hsl(40 30% 99.5%);
+  --node-fill-hi: hsl(40 30% 100%);
+
+  --shadow-sm: 0 1px 2px hsl(222 30% 40% / 0.10);
+  --shadow-md: 0 8px 24px -8px hsl(222 30% 30% / 0.18);
+  --shadow-lg: 0 26px 60px -20px hsl(222 30% 30% / 0.26);
+  --shadow-panel: -24px 0 60px -24px hsl(222 30% 30% / 0.22);
+
+  --scrim: hsl(40 20% 92% / 0.66);
+  --code-bg: hsl(40 22% 95.5%);
+}
+
+/* ---- Track colour resolution ------------------------------------- */
+[data-track="ai"]          { --track-h: var(--h-ai); }
+[data-track="programming"] { --track-h: var(--h-programming); }
+[data-track="data"]        { --track-h: var(--h-data); }
+[data-track="product"]     { --track-h: var(--h-product); }
+[data-track="strategy"]    { --track-h: var(--h-strategy); }
+[data-track="business"]    { --track-h: var(--h-business); }
+[data-track="economics"]   { --track-h: var(--h-economics); }
+[data-track="tools"]       { --track-h: var(--h-tools); }
+[data-track="evaluation"]  { --track-h: var(--h-evaluation); }
+[data-track="production"]  { --track-h: var(--h-production); }
+
+[data-track] {
+  --track: hsl(var(--track-h) var(--sat) var(--lum));
+  --track-soft: hsl(var(--track-h) var(--sat-soft) var(--lum-soft));
+  --track-glow: hsl(var(--track-h) var(--sat) var(--lum) / 0.35);
+  --track-line: hsl(var(--track-h) var(--sat) var(--lum) / 0.30);
+}
+
+/* ---- Status colour resolution ------------------------------------ */
+[data-status="not-started"] { --status-h: var(--h-not-started); --status-s: 10%; }
+[data-status="learning"]    { --status-h: var(--h-learning);    --status-s: 84%; }
+[data-status="review"]      { --status-h: var(--h-review);      --status-s: 92%; }
+[data-status="completed"]   { --status-h: var(--h-completed);   --status-s: 62%; }
+[data-status="mastered"]    { --status-h: var(--h-mastered);    --status-s: 88%; }
+[data-status] {
+  --status-c: hsl(var(--status-h) var(--status-s) var(--lum));
+  --status-soft: hsl(var(--status-h) var(--status-s) var(--lum) / 0.16);
+}

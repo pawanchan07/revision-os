@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Preparation Map</title>
+<meta name="description" content="A local, offline-first interactive map of everything I am learning across AI, product, data, strategy and business.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+<link rel="stylesheet" href="app/css/tokens.css">
+<link rel="stylesheet" href="app/css/base.css">
+<link rel="stylesheet" href="app/css/layout.css">
+<link rel="stylesheet" href="app/css/components.css">
+<link rel="stylesheet" href="app/css/map.css">
+<link rel="stylesheet" href="app/css/topic.css">
+<link rel="stylesheet" href="app/css/views.css">
+
+<script>
+  // Apply the saved theme before first paint to avoid a flash.
+  try {
+    var s = JSON.parse(localStorage.getItem('prep-map:v1') || '{}');
+    document.documentElement.dataset.theme = s.theme === 'light' ? 'light' : 'dark';
+  } catch (e) {}
+</script>
+</head>
+<body>
+
+<div id="boot">
+  <div class="boot-mark"></div>
+  <div class="boot-label">Assembling the map</div>
+  <div class="boot-error u-hidden" id="boot-error"></div>
+</div>
+
+<div id="app" class="u-hidden">
+
+  <!-- ================= LEFT RAIL ================= -->
+  <nav class="rail" aria-label="Primary">
+    <div class="rail-brand" title="Preparation Map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="6" cy="7" r="2.2"/><circle cx="18" cy="8" r="2.2"/><circle cx="12" cy="17.5" r="2.2"/>
+        <path d="M8 8.2 15.9 7.4M7.4 8.9 10.7 15.6M16.9 10 13.3 15.7"/>
+      </svg>
+    </div>
+
+    <div class="rail-nav" id="rail-nav"><!-- populated by shell.js --></div>
+
+    <div class="rail-spacer"></div>
+
+    <button class="rail-btn" id="btn-theme" data-tip="Toggle theme" aria-label="Toggle theme"></button>
+    <button class="rail-btn" id="btn-settings" data-tip="Settings & data" aria-label="Settings"></button>
+  </nav>
+
+  <!-- ================= TOP BAR ================= -->
+  <header class="topbar">
+    <div class="topbar-title">
+      <span class="t-name">Preparation Map</span>
+      <span class="t-sub" id="topbar-sub">Your complete learning landscape</span>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <button class="search-trigger" id="btn-search" aria-label="Search everything">
+      <span class="st-icon" aria-hidden="true"></span>
+      <span class="st-label">Search topics, tools, terms…</span>
+      <kbd class="key">Ctrl K</kbd>
+    </button>
+
+    <div class="mode-switch" role="group" aria-label="Reading depth">
+      <button data-mode="quick" id="mode-quick" title="Quick Revision — 1 to 3 minutes per concept">Quick</button>
+      <button data-mode="deep" id="mode-deep" title="Deep Dive — the full topic card">Deep&nbsp;Dive</button>
+    </div>
+
+    <div class="topbar-progress" id="topbar-progress"><!-- progress ring --></div>
+  </header>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main" id="main">
+    <section class="view" id="view-map"       aria-label="Preparation map"></section>
+    <section class="view" id="view-dashboard" aria-label="Dashboard"></section>
+    <section class="view" id="view-graph"     aria-label="Master dependency map"></section>
+    <section class="view" id="view-tools"     aria-label="Tools ecosystem"></section>
+    <section class="view" id="view-compare"   aria-label="Comparisons"></section>
+    <section class="view" id="view-practice"  aria-label="Practice"></section>
+    <section class="view" id="view-about"     aria-label="About"></section>
+  </main>
+
+  <!-- ================= TOPIC PANEL ================= -->
+  <aside class="topic-panel" id="topic-panel" aria-label="Topic detail" hidden></aside>
+  <div class="panel-scrim" id="panel-scrim" hidden></div>
+
+  <!-- ================= OVERLAYS ================= -->
+  <div class="overlay" id="overlay-search" hidden></div>
+  <div class="overlay" id="overlay-settings" hidden></div>
+  <div class="toast-stack" id="toasts" aria-live="polite"></div>
+</div>
+
+<script type="module" src="app/js/main.js"></script>
+<script>
+  // If the app never mounts (e.g. opened via file:// where ES modules are
+  // blocked), explain what to do instead of leaving a blank screen.
+  setTimeout(function () {
+    var boot = document.getElementById('boot');
+    var app = document.getElementById('app');
+    if (boot && !boot.classList.contains('is-done') && app && app.classList.contains('u-hidden')) {
+      // Stop the spinner and retitle it — a spinner still saying "assembling
+      // the map" directly above "here is what to do" contradicts itself.
+      boot.classList.add('is-stalled');
+      var label = boot.querySelector('.boot-label');
+      if (label) label.textContent = location.protocol === 'file:'
+        ? 'Cannot start from a file'
+        : 'Could not start';
+      var err = document.getElementById('boot-error');
+      err.classList.remove('u-hidden');
+      err.innerHTML = location.protocol === 'file:'
+        ? '<strong>Nothing is broken — this file just needs to be served.</strong>' +
+          '<br><br>Browsers refuse to load JavaScript modules from <code>file://</code>, ' +
+          'so opening <code>index.html</code> directly cannot work.' +
+          '<br><br><strong>What to do:</strong> go back to the project folder and ' +
+          'double-click <code>start.bat</code> instead. It starts the server and opens ' +
+          'the app for you. Keep the black console window open while you use it.' +
+          '<br><br>Already have it running? Open ' +
+          '<a href="http://localhost:4173">http://localhost:4173</a>.'
+        : 'The app did not start. Open the browser console for the underlying error.';
+    }
+  }, 6000);
+</script>
+</body>
+</html>
