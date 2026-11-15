@@ -708,7 +708,7 @@
   window.addEventListener('offline', function () { toast('Offline. Saved content still works'); });
   R.boot().then(function () {
     R.applyTheme(); route(); R.notify.mirror();
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(function () {
+    if ('serviceWorker' in navigator && !R.native) navigator.serviceWorker.register('sw.js').then(function () {
       // once idle, save every subject to the device so the whole app works offline
       navigator.serviceWorker.ready.then(function () { setTimeout(function () { R.INDEX.domains.forEach(function (d, i) { setTimeout(function () { fetch('../guide/data/d/' + d.id + '.json').catch(function () {}); }, 300 * i); }); }, 2500); });
     }).catch(function () {});

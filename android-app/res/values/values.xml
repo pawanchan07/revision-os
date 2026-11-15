@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Revision OS</string>
+    <string name="channel_name">Daily reminder</string>
+    <string name="channel_desc">One reminder a day, only when there is something to do</string>
+    <color name="revos_bg">#080912</color>
+    <color name="revos_accent">#8F7DFF</color>
+
+    <!-- Dark window and system bars, so nothing flashes white before the first paint.
+         The window background doubles as the splash on Android 11 and below. -->
+    <style name="RevosTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:statusBarColor">@color/revos_bg</item>
+        <item name="android:navigationBarColor">@color/revos_bg</item>
+        <item name="android:colorAccent">@color/revos_accent</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>

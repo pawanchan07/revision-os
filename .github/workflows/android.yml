@@ -1,0 +1,60 @@
+name: Android APK
+
+on:
+  push:
+    branches: [gh-pages]
+    paths: ['os/**', 'guide/data/**', 'android-app/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      REVOS_VERSION_NAME: 3.0.${{ github.run_number }}
+      REVOS_VERSION_CODE: ${{ github.run_number }}
+      HAS_RELEASE_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+
+      - name: Build debug APK
+        run: android-app/build.sh
+
+      - name: Build release APK
+        if: env.HAS_RELEASE_KEY == 'true'
+        env:
+          REVOS_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          REVOS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          REVOS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          REVOS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$REVOS_KEYSTORE_FILE"
+          cp android-app/out/*-debug.apk "$RUNNER_TEMP/"
+          android-app/build.sh release
+          cp "$RUNNER_TEMP"/*-debug.apk android-app/out/
+          rm -f "$REVOS_KEYSTORE_FILE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RevisionOS-${{ env.REVOS_VERSION_NAME }}
+          path: android-app/out/*.apk
+
+      - name: Publish to the android-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-latest --yes --cleanup-tag || true
+          gh release create android-latest android-app/out/*.apk \
+            --title "Revision OS for Android ${REVOS_VERSION_NAME}" \
+            --notes "Built from ${GITHUB_SHA::7}. Download the APK below and open it on your phone." \
+            --target "$GITHUB_SHA"
