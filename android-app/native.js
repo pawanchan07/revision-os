@@ -94,6 +94,11 @@
       var s = R.state().sess, h = location.hash.replace(/^#\/?/, '');
       if (!h && s && s.id && R.BY_ID[s.id] && R.status(s.id) === 'active' && Date.now() - (s.at || 0) < 30 * 60000) history.replaceState(null, '', '#/c/' + s.id + '/' + (s.stage || 'explore'));
       N.mirror();
+      // First open: ask for notification permission once and turn the daily reminder on.
+      // Saying no is remembered, and the switch under You still works either way.
+      if (!R.state().notify.asked) setTimeout(function () {
+        N.enable().then(function () { if (location.hash.replace(/^#\/?/, '') === 'you') window.dispatchEvent(new HashChangeEvent('hashchange')); });
+      }, 1800);
     });
   };
 })();
