@@ -8,6 +8,9 @@ import { TOPICS } from '../app/data/topics.js';
 import { DOMAINS } from '../app/data/domains.js';
 import { TOOLS, TOOL_GROUPS } from '../app/data/tools.js';
 import { COMPARISONS } from '../app/data/comparisons.js';
+import { TRACKS } from '../app/data/tracks.js';
+
+const words = t => ['what', 'why', 'analogy', 'technical'].map(k => t[k] || '').join(' ').split(/\s+/).length;
 
 const out = new URL('./data/', import.meta.url).pathname;
 mkdirSync(out + 'd', { recursive: true });
@@ -20,16 +23,19 @@ const ORDER = ['programming', 'data-sql', 'analytics', 'ml-fundamentals', 'llm',
 const missing = DOMAINS.filter(d => !ORDER.includes(d.id)).map(d => d.id);
 const order = [...ORDER.filter(id => DOMAINS.some(d => d.id === id)), ...missing];
 
-const index = { domains: [], tools: TOOLS.length, comparisons: COMPARISONS.map(c => ({ id: c.id, title: c.title })) };
+const index = { tracks: TRACKS, domains: [], tools: TOOLS.length, comparisons: COMPARISONS.map(c => ({ id: c.id, title: c.title })) };
 let count = 0;
 for (const id of order) {
   const d = DOMAINS.find(x => x.id === id);
   const topics = TOPICS.filter(t => t.domain === id);
   count += topics.length;
   index.domains.push({
-    id, title: d.title, blurb: d.blurb,
+    id, title: d.title, short: d.short, blurb: d.blurb, track: d.track, x: d.x, y: d.y,
     topics: topics.map(t => ({ id: t.id, title: t.title, summary: t.summary, priority: t.priority,
-      terms: t.keyTerms.map(k => k.term).join(' | ') }))
+      terms: t.keyTerms.map(k => k.term).join(' | '),
+      tier: t.tier, mins: Math.max(6, Math.round(words(t) / 110) + 6),
+      hook: t.questions[0] ? t.questions[0].q : '',
+      pre: t.prereq, next: t.next, rel: t.related }))
   });
   writeFileSync(`${out}d/${id}.json`, JSON.stringify(topics.map(({ track, domainTitle, ...t }) => t)));
 }

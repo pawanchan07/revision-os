@@ -138,6 +138,7 @@
     h += '<div class="side-label">Reference</div>';
     h += '<a class="side-link' + (route.name === 'compare' ? ' is-current' : '') + '" href="#/compare">Comparisons (' + INDEX.comparisons.length + ')</a>';
     h += '<a class="side-link' + (route.name === 'tools' ? ' is-current' : '') + '" href="#/tools">Tools (' + INDEX.tools + ')</a>';
+    h += '<a class="side-link" href="../os/">Open Revision OS</a>';
     h += '<a class="side-link" href="../">Open the map</a>';
     side.innerHTML = h;
     var cur = side.querySelector('.side-topic.is-current');
