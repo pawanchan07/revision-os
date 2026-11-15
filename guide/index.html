@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Revision Guide</title>
+<meta name="description" content="Every topic in Revision OS as a plain reading guide with progress tracking.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script>
+  try {
+    var t = localStorage.getItem('guide:theme');
+    if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+
+<header class="top">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open contents" aria-expanded="false">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <a class="brand" href="#/">Revision Guide</a>
+  <div class="search">
+    <input id="search" type="search" placeholder="Search topics and terms" autocomplete="off" aria-label="Search topics and terms">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <a class="top-progress" href="#/" id="top-progress" title="Overall progress"></a>
+  <button class="icon-btn" id="theme-btn" aria-label="Switch between light and dark">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+  </button>
+</header>
+
+<div class="shell">
+  <nav class="side" id="side" aria-label="Contents"></nav>
+  <div class="scrim" id="scrim" hidden></div>
+  <main class="main" id="main" tabindex="-1">
+    <p class="loading">Loading the guide…</p>
+  </main>
+</div>
+
+<noscript><p style="padding:24px">This guide needs JavaScript turned on.</p></noscript>
+<script src="app.js"></script>
+</body>
+</html>
