@@ -16,7 +16,7 @@ var R = (function () {
 
   /* ---------- state ---------- */
   var S;
-  function fresh() { return { name: 'Pawan', theme: 'dark', focus: null, depth: 2, c: {}, log: {}, xp: 0, mission: null, ch: {}, notes: {} }; }
+  function fresh() { return { name: 'Pawan', theme: 'system', haptics: true, budget: 10, sess: null, notify: { on: false, hour: 19, quietFrom: 22, quietTo: 7 }, focus: null, depth: 2, c: {}, log: {}, xp: 0, mission: null, ch: {}, notes: {} }; }
   function loadState() {
     try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { S = fresh(); }
     if (!S.migrated) {                                // bring over statuses from the map and the guide
@@ -36,7 +36,7 @@ var R = (function () {
   var saveTimer;
   R.save = function () {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 120);
+    saveTimer = setTimeout(function () { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (R.onSave) R.onSave(); }, 120);
   };
   R.state = function () { return S; };
   R.rec = function (id) { return S.c[id]; };
@@ -70,7 +70,7 @@ var R = (function () {
   R.learn = function (id) {                           // passed the mastery check for the first time
     var r = S.c[id] || (S.c[id] = { steps: {} });
     var first = !r.s;
-    if (first) { r.s = 1; r.lapses = r.lapses || 0; R.award(40); R.bump('learned'); }
+    if (first) { r.s = 1; r.lapses = r.lapses || 0; r.first = Date.now(); R.award(40); R.bump('learned'); }
     r.last = R.today(); r.due = R.addDays(R.today(), INTERVALS[r.s]);
     mirror(id); R.save();
     return first;
@@ -127,6 +127,7 @@ var R = (function () {
       o.strength += R.strength(t.id);
     });
     o.pct = o.total ? Math.round(100 * o.strength / o.total) : 0;
+    o.fine = o.total ? (100 * o.strength / o.total).toFixed(1) : '0';      // one decimal, for showing small gains
     return o;
   };
   R.dueList = function () {
@@ -136,24 +137,12 @@ var R = (function () {
     return R.FLAT.filter(function (t) { var r = S.c[t.id]; return r && r.s && (r.lapses || r.grade === 'miss' || R.isRusty(t.id)); })
       .sort(function (a, b) { return (S.c[b.id].lapses || 0) - (S.c[a.id].lapses || 0); });
   };
-  // The next concept worth learning: something in progress, else the first unlearned
-  // concept whose prerequisites are learned, preferring the focus subject.
-  R.nextNew = function (skip) {
-    var active = R.FLAT.filter(function (t) { return R.status(t.id) === 'active' && t.id !== skip; });
-    if (active.length) return active[0];
-    function ready(t) { return (t.pre || []).every(function (p) { return !R.BY_ID[p] || (S.c[p] && S.c[p].s); }); }
-    var pool = R.FLAT.filter(function (t) { return R.status(t.id) === 'new' && t.id !== skip; });
-    var inFocus = pool.filter(function (t) { return t.domain === S.focus; });
-    var order = inFocus.concat(pool);
-    for (var i = 0; i < order.length; i++) if (ready(order[i])) return order[i];
-    return order[0] || null;
-  };
   R.mission = function () {
     var m = S.mission, k = R.today();
     if (m && m.date === k && R.BY_ID[m.id]) return R.BY_ID[m.id];
-    var t = R.nextNew();
-    if (t) { S.mission = { date: k, id: t.id }; R.save(); }
-    return t;
+    var p = R.pick();
+    if (p) { S.mission = { date: k, id: p.t.id, why: p.why }; R.save(); }
+    return p && p.t;
   };
   R.missionDone = function () { var m = S.mission; return !!(m && m.date === R.today() && S.c[m.id] && S.c[m.id].s); };
   R.random = function (onlyNew) {
@@ -169,6 +158,52 @@ var R = (function () {
     return out;
   };
   R.after = function (id) { return R.FLAT.filter(function (t) { return (t.pre || []).indexOf(id) > -1 || ((R.BY_ID[id] || {}).next || []).indexOf(t.id) > -1; }); };
+
+
+  /* ---------- choosing what to learn ---------- */
+  R.lastLearned = function () {
+    var best = null;
+    Object.keys(S.c).forEach(function (id) { var r = S.c[id]; if (r.s && r.first && R.BY_ID[id] && (!best || r.first > S.c[best].first)) best = id; });
+    return best ? R.BY_ID[best] : null;
+  };
+  function has(id) { return !!(S.c[id] && S.c[id].s); }
+  // Locked is a hint, never a wall: something it builds on is not learned yet.
+  R.locked = function (id) { var t = R.BY_ID[id]; return R.status(id) === 'new' && (t.pre || []).some(function (p) { return R.BY_ID[p] && !has(p); }); };
+  // Scores every unlearned concept on readiness, focus, momentum, importance and difficulty.
+  R.pick = function (skip) {
+    var active = R.FLAT.filter(function (t) { return R.status(t.id) === 'active' && t.id !== skip; });
+    if (active.length) return { t: active[0], why: 'You started this one. Finish it.' };
+    var last = R.lastLearned(), best = null, bs = -1e9, why = '';
+    R.FLAT.forEach(function (t) {
+      if (R.status(t.id) !== 'new' || t.id === skip) return;
+      var pre = (t.pre || []).filter(function (p) { return R.BY_ID[p]; }), known = pre.filter(has).length, missing = pre.length - known;
+      var follows = last && ((last.next || []).indexOf(t.id) > -1 || pre.indexOf(last.id) > -1);
+      var sc = -missing * 6 + known * 2 + (t.domain === S.focus ? 5 : 0) + (last && t.domain === last.domain ? 3 : 0) + (follows ? 4 : 0) + (t.priority === 'high' ? 1.5 : 0) - t.tier * 0.6 - t.n * 0.004;
+      if (sc > bs) {
+        bs = sc; best = t;
+        why = follows ? 'Follows directly from ' + last.title + '.' : t.domain === S.focus ? 'Next in your focus, ' + R.DOMAIN[t.domain].title + '.' : known ? 'Builds on ' + known + (known === 1 ? ' thing' : ' things') + ' you already know.' : 'A clean starting point. Nothing needed first.';
+      }
+    });
+    return best ? { t: best, why: why } : null;
+  };
+  R.nextNew = function (skip) { var p = R.pick(skip); return p ? p.t : null; };
+
+  /* ---------- time budgets ---------- */
+  R.BUDGETS = [[2, 'Quick recall'], [5, 'Micro lesson'], [10, 'Daily mission'], [20, 'Deep session'], [45, 'Expert session']];
+  R.budget = function () { return S.budget || 10; };
+  R.setBudget = function (n) { S.budget = n; R.save(); };
+  R.planStages = function () { return R.budget() <= 5 ? ['explore', 'understand', 'test'] : STAGES; };
+  R.depthTarget = function () { var b = R.budget(); return b <= 5 ? 1 : b <= 10 ? 2 : b <= 20 ? 3 : 4; };
+
+  /* ---------- session memory, haptics, theme ---------- */
+  R.sess = function (patch) { if (patch === null) S.sess = null; else if (patch) S.sess = Object.assign(S.sess || {}, patch, { at: Date.now() }); R.save(); return S.sess; };
+  var BUZZ = { tick: 8, good: [12, 40, 18], bad: 30, done: [14, 50, 14, 50, 40] };
+  R.haptic = function (k) { try { if (S.haptics !== false && navigator.vibrate) navigator.vibrate(BUZZ[k] || 8); } catch (e) {} };
+  R.applyTheme = function () {
+    var t = S.theme || 'system', el = document.documentElement;
+    if (t === 'system') el.removeAttribute('data-theme'); else el.setAttribute('data-theme', t);
+    try { localStorage.setItem('revos:theme', t); } catch (e) {}
+  };
 
   /* ---------- search as a navigator ---------- */
   function find(name) {

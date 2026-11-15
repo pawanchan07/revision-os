@@ -349,12 +349,136 @@
         out: stat('training', pct(tr(v.c))) + stat('validation', pct(va(v.c)), gap > 0.2 ? 'bad' : '') + '<p>' + (v.c < 2 ? 'Underfitting: both errors are high. The model is too simple to capture the pattern.' : v.c > 5.5 ? 'Overfitting: training error keeps falling while validation error climbs. The model is memorising.' : 'The sweet spot: validation error is near its lowest.') + '</p>' };
     } });
 
-  R.hasVisual = function (id) { return !!(R.visuals[id] || R.flows[id]); };
+
+  /* ---- more flows: decisions and processes ---- */
+  flow('rag-vs-finetuning when-not-to-finetune', { title: 'Decision: prompt, RAG or fine-tune?', nodes: [
+    ['What is wrong?', 'Name the failure before picking a tool. Most teams skip this step.'],
+    ['Missing knowledge?', 'The model does not know your facts, or they change. That is a retrieval problem: **RAG**.'],
+    ['Wrong behaviour?', 'It knows enough and answers in the wrong tone, format or style. Try a **better prompt with examples** first.'],
+    ['Still wrong at scale?', 'If prompting cannot hold the behaviour, or the prompt is too long and costly, consider **fine-tuning**.'],
+    ['Structured data?', 'If the answer is a number in a database, use a **query or a tool**. Neither RAG nor fine-tuning.'],
+    ['Decide', 'Order of attempts: prompt, then RAG, then fine-tune. Each step costs more and is harder to undo.']] });
+  flow('ai-build-vs-buy ai-model-selection', { title: 'Decision: build, buy or call an API?', nodes: [
+    ['Is it core?', 'Does this capability differentiate the product, or is it plumbing?'],
+    ['Data sensitivity', 'Can the data leave your environment? If not, hosted APIs may be ruled out.'],
+    ['Volume and cost', 'At low volume an API is cheapest. At high volume, self-hosting can win.'],
+    ['Team', 'Do you have people to run models in production, on call, for years?'],
+    ['Speed', 'How soon must it ship? An API ships this month.'],
+    ['Decide', 'Default: start with an API, measure, and move in-house only where the numbers and the strategy both say so.']] });
+  flow('ai-use-case-selection ai-feasibility', { title: 'Decision: is this a good AI use case?', nodes: [
+    ['Real problem?', 'Is there a painful, frequent task, measured in time or money?'],
+    ['Does it need AI?', 'Would rules, search or a form solve it? If so, do that.'],
+    ['Tolerance for error', 'What happens when it is wrong one time in twenty? Who catches it?'],
+    ['Data', 'Do you have the inputs it needs, with the rights to use them?'],
+    ['Measurable?', 'Can you define good, build a golden set and gate on it?'],
+    ['Decide', 'High value, error tolerant, measurable: build. High value, error intolerant: build with a human in the loop. Otherwise: wait.']] });
+  flow('prioritization opportunity-sizing', { title: 'Prioritising one idea', nodes: [
+    ['Reach', 'How many users does it touch in a period?'],
+    ['Impact', 'How much does it move the metric for each of them?'],
+    ['Confidence', 'How much evidence is behind those two numbers? Discount guesses.'],
+    ['Effort', 'Person-weeks across every team involved, including the ones nobody asked.'],
+    ['Score', 'Reach times impact times confidence, divided by effort. A way to compare, not a verdict.'],
+    ['Sanity check', 'Does the ranking survive strategy, dependencies and what you promised customers?']] });
+  flow('human-in-the-loop', { title: 'Where the human sits', nodes: [
+    ['AI drafts', 'The model produces an answer or proposes an action.'],
+    ['Confidence check', 'Low confidence, high stakes or a policy trigger routes it to a person.'],
+    ['Human reviews', 'Approve, edit or reject. The interface must make checking faster than doing.'],
+    ['Action', 'Only now does anything irreversible happen.'],
+    ['Feedback', 'The edit or rejection is logged and becomes an eval case.']],
+    note: 'If reviewers approve 99% without reading, you do not have a human in the loop. You have a rubber stamp.' });
+  flow('tracing logging-llm', { title: 'One request, traced', nodes: [
+    ['Request', 'A trace id is created and travels with everything that follows.'],
+    ['Retrieval span', 'Query, chunks returned, scores, time taken.'],
+    ['Prompt span', 'The exact prompt sent, with its version.'],
+    ['Model span', 'Model, parameters, tokens in and out, latency, cost.'],
+    ['Tool spans', 'Each tool call with its arguments and result.'],
+    ['Response', 'What the user saw, plus any feedback they gave.']],
+    note: 'When an answer is wrong, the trace tells you which step to blame. Without it you are guessing.' });
+  flow('hybrid-search keyword-vs-semantic-search reranking', { title: 'Hybrid search with reranking', nodes: [
+    ['Query', '"error code E-4012 on invoice export"'],
+    ['Keyword search', 'Finds exact matches such as E-4012. Misses paraphrases.'],
+    ['Vector search', 'Finds text about export failures. May miss the exact code.'],
+    ['Fuse', 'Merge both ranked lists so items high in either rise.'],
+    ['Rerank', 'A slower model reads the query with each candidate and reorders the top results.'],
+    ['Top results', 'A short list that has both the exact code and the right meaning.']] });
+  flow('llm-as-judge judge-bias', { title: 'An LLM judge', nodes: [
+    ['Case', 'A question, the answer under test, and a reference or context.'],
+    ['Rubric', 'One specific criterion with pass and fail defined.'],
+    ['Judge reasons', 'The judge explains before it scores.'],
+    ['Verdict', 'Pass or fail, or a short scale.'],
+    ['Validate', 'Compare a sample of verdicts against human labels. Until they agree, do not trust the score.']] });
+  flow('query-transformation', { title: 'Rewriting a query', nodes: [
+    ['User asks', '"and what about for the annual one?"'],
+    ['Add context', 'Use the conversation to make it standalone: "What is the refund policy for annual plans?"'],
+    ['Expand', 'Generate variants: refund window, cancellation, money back.'],
+    ['Retrieve each', 'Run retrieval for every variant.'],
+    ['Merge', 'Combine and deduplicate, then rerank.']] });
+  flow('event-tracking', { title: 'From tap to dashboard', nodes: [
+    ['User acts', 'A tap, a view, a purchase.'],
+    ['Event fires', 'A named event with properties: who, what, when, where.'],
+    ['Pipeline', 'Events are collected, validated and stored.'],
+    ['Model', 'Raw events are joined into sessions, funnels and cohorts.'],
+    ['Dashboard', 'A number someone will make a decision on.']],
+    note: 'If the event is named or fired wrongly at step 2, every number downstream is wrong and looks fine.' });
+
+  /* ================= code traces ================= */
+  // { title, code: [lines], steps: [[lineIndex, { vars }, output, note]] }
+  R.traces = {};
+  R.renderTrace = function (box, def) {
+    var i = 0;
+    box.innerHTML = '<div class="vis"><div class="vis-head"><span class="lbl">' + esc(def.title) + '</span><span class="vis-actions"><button class="btn sm ghost" data-a="back">Back</button><button class="btn sm" data-a="fwd">Step</button></span></div>' +
+      '<div class="trace"><pre class="trace-code">' + def.code.map(function (l, k) { return '<span class="tl" data-k="' + k + '">' + (esc(l) || ' ') + '</span>'; }).join('\n') + '</pre><div class="trace-side"><span class="lbl">Memory</span><div class="trace-vars"></div><span class="lbl">Output</span><pre class="trace-out"></pre></div></div><div class="flow-detail" aria-live="polite"></div></div>';
+    function show() {
+      var s = def.steps[i];
+      box.querySelectorAll('.tl').forEach(function (l) { l.classList.toggle('is-on', +l.dataset.k === s[0]); });
+      var v = s[1] || {}, keys = Object.keys(v);
+      box.querySelector('.trace-vars').innerHTML = keys.length ? keys.map(function (k) { return '<div><b>' + esc(k) + '</b><span>' + esc(v[k]) + '</span></div>'; }).join('') : '<div class="dim">empty</div>';
+      box.querySelector('.trace-out').textContent = s[2] || '';
+      box.querySelector('.flow-detail').innerHTML = '<b>Step ' + (i + 1) + ' of ' + def.steps.length + '</b> ' + R.inline(s[3] || '');
+    }
+    box.addEventListener('click', function (e) {
+      var a = e.target.closest('[data-a]'); if (!a) return;
+      i = a.dataset.a === 'fwd' ? (i + 1) % def.steps.length : Math.max(0, i - 1); show();
+    });
+    show();
+  };
+  R.traces.variables = { title: 'Watch the variables change', code: ['price = 100', 'quantity = 3', 'total = price * quantity', 'price = 120', 'print(total)'], steps: [
+    [0, { price: '100' }, '', 'A name is attached to a value.'],
+    [1, { price: '100', quantity: '3' }, '', 'A second name, a second value.'],
+    [2, { price: '100', quantity: '3', total: '300' }, '', 'The right side is worked out first, then stored. `total` holds 300, not a formula.'],
+    [3, { price: '120', quantity: '3', total: '300' }, '', '`price` now points at 120. `total` does not move, because it stored a result.'],
+    [4, { price: '120', quantity: '3', total: '300' }, '300', 'Prints 300, not 360. This surprises most people the first time.']] };
+  R.traces.conditionals = { title: 'Which branch runs?', code: ['score = 0.62', 'if score >= 0.8:', '    action = "auto-approve"', 'elif score >= 0.5:', '    action = "send to human"', 'else:', '    action = "reject"', 'print(action)'], steps: [
+    [0, { score: '0.62' }, '', 'A confidence score from a model.'],
+    [1, { score: '0.62' }, '', 'Is 0.62 at least 0.8? No. Skip this branch.'],
+    [3, { score: '0.62' }, '', 'Is 0.62 at least 0.5? Yes.'],
+    [4, { score: '0.62', action: '"send to human"' }, '', 'This branch runs. Once one branch runs, the rest are skipped.'],
+    [7, { score: '0.62', action: '"send to human"' }, 'send to human', 'Order matters: put the 0.5 check first and 0.9 would also go to a human.']] };
+  R.traces.loops = { title: 'A loop, one pass at a time', code: ['chunks = ["refund", "cancel", "billing"]', 'found = []', 'for c in chunks:', '    if "c" in c:', '        found.append(c)', 'print(found)'], steps: [
+    [0, { chunks: '["refund","cancel","billing"]' }, '', 'A list of three items.'],
+    [1, { chunks: '[...3 items]', found: '[]' }, '', 'An empty list to collect results.'],
+    [2, { c: '"refund"', found: '[]' }, '', 'First pass: `c` is "refund".'],
+    [3, { c: '"refund"', found: '[]' }, '', 'Does "refund" contain the letter c? No.'],
+    [2, { c: '"cancel"', found: '[]' }, '', 'Second pass: `c` is "cancel".'],
+    [4, { c: '"cancel"', found: '["cancel"]' }, '', 'It contains c, so it is added.'],
+    [2, { c: '"billing"', found: '["cancel"]' }, '', 'Third pass: "billing". No c.'],
+    [5, { found: '["cancel"]' }, "['cancel']", 'The loop ends when the list runs out. The same body ran three times with a different `c`.']] };
+  R.traces.functions = { title: 'Calling a function', code: ['def cost(tokens, price_per_1k):', '    return tokens / 1000 * price_per_1k', '', 'a = cost(2000, 0.5)', 'b = cost(500, 0.5)', 'print(a + b)'], steps: [
+    [0, {}, '', 'Defining a function runs nothing. It stores a recipe under the name `cost`.'],
+    [3, { tokens: '2000', price_per_1k: '0.5' }, '', 'The call hands 2000 and 0.5 to the recipe. Inside it they are called `tokens` and `price_per_1k`.'],
+    [1, { tokens: '2000', price_per_1k: '0.5' }, '', '2000 / 1000 * 0.5 = 1.0, sent back to the caller.'],
+    [3, { a: '1.0' }, '', 'The inner names are gone. Only the result survives, stored in `a`.'],
+    [4, { a: '1.0', b: '0.25' }, '', 'Same recipe, different inputs.'],
+    [5, { a: '1.0', b: '0.25' }, '1.25', 'A function is a reusable step with inputs and one output.']] };
+
+  R.hasVisual = function (id) { return !!(R.visuals[id] || R.flows[id] || R.traces[id]); };
   R.mountVisual = function (box, id) {
     var h = '';
     if (R.visuals[id]) h += '<div data-v="sim"></div>';
+    if (R.traces[id]) h += '<div data-v="trace"></div>';
     if (R.flows[id]) h += '<div data-v="flow"></div>';
     box.innerHTML = h;
+    if (R.traces[id]) R.renderTrace(box.querySelector('[data-v=trace]'), R.traces[id]);
     if (R.visuals[id]) R.renderSim(box.querySelector('[data-v=sim]'), R.visuals[id]);
     if (R.flows[id]) R.renderFlow(box.querySelector('[data-v=flow]'), R.flows[id]);
   };
