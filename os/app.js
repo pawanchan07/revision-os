@@ -260,7 +260,7 @@
     if (sw) sw.addEventListener('click', function () {
       var pool = R.FLAT.filter(function (x) { return R.status(x.id) === 'new' && !R.locked(x.id) && x.id !== m.id; });
       var t = pool[Math.floor(Math.random() * Math.min(pool.length, 30))]; if (!t) return;
-      S.mission = { date: R.today(), id: t.id, why: 'You asked for something else.' }; R.save(); pageHome();
+      S.mission = { date: R.today(), id: t.id, why: 'You asked for something else.', at: Date.now(), pinned: 1 }; R.save(); pageHome();
     });
     var here = main.querySelector('.tnode.is-here'); if (here) here.parentNode.scrollLeft = here.offsetLeft - here.parentNode.offsetLeft - 90;
     document.title = 'Revision OS';
@@ -287,7 +287,7 @@
       if (plan.indexOf(stage) < 0) plan = R.STAGES;
       var d = R.DOMAIN[stub.domain], si = R.STAGES.indexOf(stage), pi = plan.indexOf(stage), nextStage = plan[pi + 1], prevStage = plan[pi - 1];
       var dir = lastConcept === id && lastStageIdx > si ? 'back' : 'fwd'; lastStageIdx = si; lastConcept = id;
-      if ((R.sess() || {}).id !== id) R.sess(null);
+      if ((R.sess() || {}).id !== id) { R.sess(null); R.touch(stub.domain); }      // opening it is the signal: missions follow you here
       R.sess({ id: id, stage: stage });
       setTint(d.track);
       var passive = { explore: 1, understand: 1, visualize: 1, connect: 1 }[stage];
@@ -454,7 +454,7 @@
   /* ================= worlds and journeys ================= */
   function pagePath() {
     setTint('ai');
-    var S = R.state(), html = '<div class="wrap"><span class="lbl">Worlds</span><h1>' + R.INDEX.domains.length + ' subjects, ' + R.FLAT.length + ' concepts</h1><p class="lede">Each subject is a path. Pick one to make it your focus, and missions will come from there.</p><div class="worlds">';
+    var S = R.state(), html = '<div class="wrap"><span class="lbl">Worlds</span><h1>' + R.INDEX.domains.length + ' subjects, ' + R.FLAT.length + ' concepts</h1><p class="lede">Go anywhere, in any order. Open a concept in any subject and your missions and nudges follow you there.</p><div class="worlds">';
     R.INDEX.domains.forEach(function (d, i) {
       var t = R.totals(d.topics);
       html += '<a class="world' + (S.focus === d.id ? ' is-focus' : '') + (t.learned === t.total ? ' is-complete' : '') + '" href="#/d/' + d.id + '" style="' + tint(d.track) + '">' + ring(Math.round(100 * t.learned / t.total), 52, t.learned) + '<span class="world-t"><small>' + ('0' + (i + 1)).slice(-2) + (S.focus === d.id ? ' / focus' : '') + '</small><b>' + esc(d.title) + '</b><span class="dim">' + t.learned + ' of ' + t.total + (t.due ? ' / ' + t.due + ' due' : '') + '</span></span></a>';

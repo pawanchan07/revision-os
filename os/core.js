@@ -149,9 +149,10 @@ var R = (function () {
   };
   R.mission = function () {
     var m = S.mission, k = R.today();
-    if (m && m.date === k && R.BY_ID[m.id]) return R.BY_ID[m.id];
+    var cur = R.currentSubject(), moved = m && cur && R.BY_ID[m.id] && R.BY_ID[m.id].domain !== cur && (S.int[cur].at > (m.at || 0)) && R.status(m.id) === 'new' && !m.pinned;
+    if (m && m.date === k && R.BY_ID[m.id] && !moved) return R.BY_ID[m.id];
     var p = R.pick();
-    if (p) { S.mission = { date: k, id: p.t.id, why: p.why }; R.save(); }
+    if (p) { S.mission = { date: k, id: p.t.id, why: p.why, at: Date.now() }; R.save(); }
     return p && p.t;
   };
   R.missionDone = function () { var m = S.mission; return !!(m && m.date === R.today() && S.c[m.id] && S.c[m.id].s); };
@@ -171,6 +172,23 @@ var R = (function () {
 
 
   /* ---------- choosing what to learn ---------- */
+  // Interest: which subjects you have been opening lately. Nothing here is a commitment.
+  // Open a concept anywhere and the next missions and nudges lean that way.
+  R.touch = function (domain) {
+    S.int = S.int || {};
+    var x = S.int[domain] || (S.int[domain] = { n: 0, at: 0 });
+    x.n = Math.min(12, x.n + 1); x.at = Date.now();
+    R.save();
+  };
+  R.interest = function (domain) {
+    var x = (S.int || {})[domain]; if (!x) return 0;
+    var days = (Date.now() - x.at) / 864e5;
+    return Math.min(1, x.n / 3) * Math.exp(-days / 6);                 // fades over about two weeks
+  };
+  R.currentSubject = function () {
+    var best = null, at = 0; Object.keys(S.int || {}).forEach(function (d) { if (S.int[d].at > at && R.DOMAIN[d]) { at = S.int[d].at; best = d; } });
+    return best;
+  };
   R.lastLearned = function () {
     var best = null;
     Object.keys(S.c).forEach(function (id) { var r = S.c[id]; if (r.s && r.first && R.BY_ID[id] && (!best || r.first > S.c[best].first)) best = id; });
@@ -183,15 +201,17 @@ var R = (function () {
   R.pick = function (skip) {
     var active = R.FLAT.filter(function (t) { return R.status(t.id) === 'active' && t.id !== skip; });
     if (active.length) return { t: active[0], why: 'You started this one. Finish it.' };
-    var last = R.lastLearned(), best = null, bs = -1e9, why = '';
+    var last = R.lastLearned(), cur = R.currentSubject(), best = null, bs = -1e9, why = '';
     R.FLAT.forEach(function (t) {
       if (R.status(t.id) !== 'new' || t.id === skip) return;
       var pre = (t.pre || []).filter(function (p) { return R.BY_ID[p]; }), known = pre.filter(has).length, missing = pre.length - known;
       var follows = last && ((last.next || []).indexOf(t.id) > -1 || pre.indexOf(last.id) > -1);
-      var sc = -missing * 6 + known * 2 + (t.domain === S.focus ? 5 : 0) + (last && t.domain === last.domain ? 3 : 0) + (follows ? 4 : 0) + (t.priority === 'high' ? 1.5 : 0) - t.tier * 0.6 - t.n * 0.004;
+      var here = t.domain === cur, into = R.interest(t.domain);
+      // where you are now counts most, then anything you have shown interest in, then what flows on
+      var sc = (here ? 9 : 0) + into * 6 + (t.domain === S.focus ? 5 : 0) + (follows ? 4 : 0) + known * 2 - missing * (here ? 2 : 5) + (t.priority === 'high' ? 1.5 : 0) - t.tier * 0.6 - t.n * 0.0005;
       if (sc > bs) {
         bs = sc; best = t;
-        why = follows ? 'Follows directly from ' + last.title + '.' : t.domain === S.focus ? 'Next in your focus, ' + R.DOMAIN[t.domain].title + '.' : known ? 'Builds on ' + known + (known === 1 ? ' thing' : ' things') + ' you already know.' : 'A clean starting point. Nothing needed first.';
+        why = follows ? 'Follows directly from ' + last.title + '.' : here ? 'More from ' + R.DOMAIN[t.domain].title + ', where you have been lately.' : t.domain === S.focus ? 'Next in your focus, ' + R.DOMAIN[t.domain].title + '.' : into > 0.2 ? 'Back to ' + R.DOMAIN[t.domain].title + '.' : known ? 'Builds on ' + known + (known === 1 ? ' thing' : ' things') + ' you already know.' : 'A clean starting point. Nothing needed first.';
       }
     });
     return best ? { t: best, why: why } : null;
