@@ -294,6 +294,28 @@ public class MainActivity extends Activity {
             Reminders.apply(a);
         }
 
+        /** Answers given from a notification since the app was last open, as a JSON list. Reading empties it. */
+        @JavascriptInterface
+        public String takeInbox() {
+            return Reminders.takeInbox(a);
+        }
+
+        @JavascriptInterface
+        public boolean fullScreenAllowed() {
+            return Reminders.canFullScreen(a);
+        }
+
+        /** Opens the Android screen where full-screen notifications are allowed for this app. */
+        @JavascriptInterface
+        public void requestFullScreen() {
+            try {
+                Intent i = Build.VERSION.SDK_INT >= 34
+                        ? new Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + a.getPackageName()))
+                        : new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, a.getPackageName());
+                a.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception ignored) { }
+        }
+
         @JavascriptInterface
         public void minimize() {
             a.runOnUiThread(new UiTask(a, UiTask.MINIMIZE, false));

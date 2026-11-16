@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- For the optional full-screen nudge. On Android 14 and later the user must also allow it in settings. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Only for the links to the web guide and to source articles. The app itself runs offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -37,6 +39,18 @@
                 <data android:scheme="revisionos" />
             </intent-filter>
         </activity>
+
+        <!-- The full-screen nudge. Appears over the lock screen, stays out of recent apps. -->
+        <activity
+            android:name=".NudgeActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance"
+            android:screenOrientation="unspecified"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|uiMode" />
 
         <receiver android:name=".ReminderReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">

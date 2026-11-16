@@ -16,7 +16,7 @@ var R = (function () {
 
   /* ---------- state ---------- */
   var S;
-  function fresh() { return { name: 'Pawan', theme: 'system', haptics: true, budget: 10, sess: null, notify: { on: false, hour: 19, quietFrom: 22, quietTo: 7 }, focus: null, depth: 2, c: {}, log: {}, xp: 0, mission: null, ch: {}, notes: {} }; }
+  function fresh() { return { name: 'Pawan', theme: 'system', haptics: true, budget: 10, sess: null, notify: { on: false, hour: 19, quietFrom: 22, quietTo: 7, smart: true, streakSave: true, full: false }, focus: null, depth: 2, c: {}, log: {}, xp: 0, mission: null, ch: {}, notes: {} }; }
   function loadState() {
     try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { S = fresh(); }
     if (!S.migrated) {                                // bring over statuses from the map and the guide
@@ -94,7 +94,17 @@ var R = (function () {
 
   /* ---------- xp, level, activity ---------- */
   function day() { var k = R.today(); return S.log[k] || (S.log[k] = { xp: 0, sec: 0, learned: 0, reviewed: 0 }); }
-  R.award = function (n) { S.xp += n; day().xp += n; R.save(); if (R.onXp) R.onXp(n); };
+  R.award = function (n) {
+    S.xp += n; day().xp += n;
+    var h = new Date().getHours(); S.hours = S.hours || {}; S.hours[h] = (S.hours[h] || 0) + 1;      // when you tend to study
+    R.save(); if (R.onXp) R.onXp(n);
+  };
+  // The hour you most often study at, once there is enough history to say. Null before that.
+  R.usualHour = function () {
+    var hs = S.hours || {}, best = null, total = 0;
+    Object.keys(hs).forEach(function (h) { total += hs[h]; if (best === null || hs[h] > hs[best]) best = h; });
+    return total >= 40 && best !== null ? +best : null;
+  };
   R.bump = function (k) { day()[k]++; };
   R.addTime = function (sec) { day().sec += sec; R.save(); };
   R.level = function () {

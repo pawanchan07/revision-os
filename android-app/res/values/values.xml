@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Revision OS</string>
-    <string name="channel_name">Daily reminder</string>
-    <string name="channel_desc">One reminder a day, only when there is something to do</string>
+    <string name="channel_name">Learning nudges</string>
+    <string name="channel_desc">Your next mission, reviews that are due, and a streak warning. Two a day at most.</string>
+    <string name="nudge_label">Your next discovery</string>
+    <string name="act_start">Start</string>
+    <string name="act_later">Later</string>
+    <string name="act_later_long">Not now. Remind me in an hour</string>
+    <string name="act_reveal">Show answer</string>
+    <string name="act_got">Got it</string>
+    <string name="act_missed">Missed it</string>
     <color name="revos_bg">#080912</color>
     <color name="revos_accent">#8F7DFF</color>
 

@@ -486,7 +486,8 @@
     while (cur && chain.length < 4) { chain.push(cur); cur = (cur.next || []).map(function (x) { return R.BY_ID[x]; }).filter(function (x) { return x && R.status(x.id) === 'new' && chain.indexOf(x) < 0; })[0]; }
     var deepN = Object.keys(R.deep).length, visN = R.FLAT.filter(function (t) { return R.hasVisual(t.id); }).length;
     function seg(name, val, opts) { return '<div class="seg" role="radiogroup" data-seg="' + name + '">' + opts.map(function (o) { return '<button role="radio" aria-checked="' + (o[0] === val) + '" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
-    var hours = []; for (var hh = 6; hh <= 22; hh++) hours.push('<option value="' + hh + '"' + (n.hour === hh ? ' selected' : '') + '>' + (hh % 12 || 12) + (hh < 12 ? ' am' : ' pm') + '</option>');
+    function hourLabel(x) { return (x % 12 || 12) + (x < 12 ? ' am' : ' pm'); }
+    var hours = []; for (var hh = 7; hh <= 20; hh++) hours.push('<option value="' + hh + '"' + (n.hour === hh ? ' selected' : '') + '>' + hourLabel(hh) + '</option>');
     main.innerHTML = '<div class="wrap"><header class="you-head">' + ring(lvl.pct, 84, lvl.level) + '<div><span class="lbl">Level ' + lvl.level + ' / ' + S.xp + ' XP</span><h1>' + esc(S.name) + '</h1><p class="dim">' + (lvl.span - lvl.into) + ' XP to level ' + (lvl.level + 1) + ' / ' + R.streak() + ' day streak</p></div></header>' +
       '<section class="pulse-row big"><div><b>' + tot.pct + '%</b><span>knowledge</span></div><div><b>' + tot.learned + '</b><span>learned of ' + tot.total + '</span></div><div><b>' + tot.mastered + '</b><span>mastered</span></div><div><b>' + R.mins(R.weekSeconds()) + '</b><span>min this week</span></div></section>' +
       '<div class="grid2"><section class="card"><span class="lbl">Knowledge coverage</span><div class="sys">' + tracks.map(function (x) { return '<div class="sys-row" style="' + tint(x.tr.id) + '"><span>' + esc(x.tr.label) + '</span>' + meter(x.t.pct, 'tinted') + '<b>' + x.t.pct + '%</b></div>'; }).join('') + '</div><p class="dim sm">Counts how well each concept is holding, not whether you opened it.</p></section>' +
@@ -494,17 +495,31 @@
       '<span class="lbl gap">Needs attention</span>' + (weak.length ? '<div class="rows tight">' + weak.map(function (t) { var r = S.c[t.id]; return row(t, r.lapses ? r.lapses + (r.lapses > 1 ? ' slips' : ' slip') : 'rusty'); }).join('') + '</div>' : '<p class="dim">Nothing weak. Concepts you miss in review show up here.</p>') + '</section></div>' +
       '<div class="grid2"><section class="card"><span class="lbl">Reviews coming up</span><div class="fc">' + fc.map(function (c, i) { return '<div><i style="height:' + Math.round(c / maxFc * 56 + (c ? 4 : 1)) + 'px"></i><b>' + c + '</b><span>' + (i === 0 ? 'today' : new Date(R.addDays(R.today(), i) + 'T12:00').toLocaleDateString(undefined, { weekday: 'short' })) + '</span></div>'; }).join('') + '</div></section>' +
       '<section class="card"><span class="lbl">Activity</span><div class="heat-wrap">' + heat(20) + '</div></section></div>' +
-      '<section class="card"><span class="lbl">Reminders</span>' + (perm === 'unsupported' ? '<p class="dim">This browser does not support notifications.</p>' : perm === 'denied' ? '<p class="dim">Notifications are blocked for this site. Allow them in your browser or Android settings, then come back.</p>' :
-        '<div class="set"><span>One reminder a day, only when there is something to do</span><button class="switch" role="switch" aria-label="Reminders" aria-checked="' + !!(n.on && perm === 'granted') + '" data-a="notify"><i></i></button></div>' +
-        '<div class="set"><span>Not before</span><select data-set="hour" aria-label="Earliest reminder time">' + hours.join('') + '</select></div><div class="set"><span>Quiet from 10 pm to 7 am</span><span class="dim">always</span></div>' +
-        (n.on && perm === 'granted' ? '<p><button class="btn ghost sm" data-a="notify-test">Send a test reminder</button></p>' : '') +
-        '<p class="dim sm">Stays silent once today\'s mission is done and nothing is due. Android decides the exact minute, so a reminder can arrive later than the hour you set.</p>') + '</section>' +
+      '<section class="card"><span class="lbl">Nudges</span>' + (perm === 'unsupported' ? '<p class="dim">This browser does not support notifications.</p>' : perm === 'denied' ? '<p class="dim">Notifications are blocked for this app. Allow them in Android settings, then come back.</p>' :
+        '<div class="set"><span>Daily nudge<small>The question is the notification. Silent once today is done.</small></span><button class="switch" role="switch" aria-label="Daily nudge" aria-checked="' + !!(n.on && perm === 'granted') + '" data-a="notify"><i></i></button></div>' +
+        (n.on && perm === 'granted' ? (R.native ?
+          '<div class="set"><span>Learn my time<small>' + (R.usualHour() === null ? 'Not enough history yet. Using the time below.' : 'You usually study around ' + hourLabel(R.usualHour()) + '.') + '</small></span><button class="switch" role="switch" aria-label="Learn my time" aria-checked="' + (n.smart !== false) + '" data-a="smart"><i></i></button></div>' : '') +
+          '<div class="set"><span>Nudge at</span><select data-set="hour" aria-label="Nudge time">' + hours.join('') + '</select></div>' +
+          (R.native ? '<div class="set"><span>Streak warning at 9 pm<small>Only with a streak of 2 or more and nothing done that day.</small></span><button class="switch" role="switch" aria-label="Streak warning" aria-checked="' + (n.streakSave !== false) + '" data-a="streaksave"><i></i></button></div>' +
+          '<div class="set"><span>Full-screen mission<small>' + (n.full && !N.fullAllowed() ? 'Waiting for permission. Tap to open Android settings and allow it.' : 'Takes the whole screen when the phone is locked or idle. A banner when you are using it.') + '</small></span><button class="switch" role="switch" aria-label="Full-screen mission" aria-checked="' + !!(n.full && N.fullAllowed()) + '" data-a="fullscreen"><i></i></button></div>' +
+          '<div id="plan"></div>' : '') +
+          '<p><button class="btn ghost sm" data-a="notify-test">Send a test nudge</button></p>' : '') +
+        '<p class="dim sm">' + (R.native ? 'Two a day at most. After four days away they slow down, and after seven they stop until you open the app. Android can deliver a nudge some minutes late.' : 'Stays silent once today\'s mission is done and nothing is due. The browser decides the exact minute.') + '</p>') + '</section>' +
       '<section class="card"><span class="lbl">Look and feel</span><div class="set"><span>Theme</span>' + seg('theme', S.theme || 'system', [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]) + '</div><div class="set"><span>Vibration on answers and mastery</span><button class="switch" role="switch" aria-label="Vibration" aria-checked="' + (S.haptics !== false) + '" data-a="haptics"><i></i></button></div><div class="set"><span>Name</span><input id="name" aria-label="Your name" value="' + esc(S.name) + '" maxlength="24"></div></section>' +
       '<section class="card"><span class="lbl">Content depth</span><p class="dim sm">' + deepN + ' concepts have the hand-written deep layer: assumptions, failure modes, trade-offs, expert notes and scenario questions. ' + visN + ' have an interactive visual. The rest use the base content.</p></section>' +
       '<section class="card"><span class="lbl">Your data</span><p class="dim sm">Progress lives in this browser only. Copy a backup before clearing browser data or changing device.</p><p class="acts"><button class="btn ghost sm" data-a="export">Copy backup</button><button class="btn ghost sm" data-a="import">Restore</button><button class="btn ghost sm danger" data-a="reset">Reset progress</button></p><div id="sysbox"></div></section>' +
       '<p class="foot dim sm"><a href="../guide/">Plain reading guide</a> / <a href="../">Original map</a></p></div>';
     document.getElementById('name').addEventListener('change', function (e) { S.name = e.target.value.trim() || 'Pawan'; R.save(); toast('Saved'); });
     var hr = main.querySelector('[data-set=hour]'); if (hr) hr.addEventListener('change', function () { n.hour = +hr.value; R.save(); toast('Saved'); });
+    // what is actually queued, so the behaviour is never a mystery
+    var planBox = document.getElementById('plan');
+    if (planBox && N.plan) N.plan().then(function (list) {
+      if (!planBox.isConnected) return;
+      planBox.innerHTML = '<span class="lbl gap">Coming up</span>' + (list.length ? '<div class="rows tight">' + list.sort(function (a, b) { return a.at - b.at; }).map(function (x) {
+        var d = new Date(x.at);
+        return '<div class="row"><span class="row-t"><b>' + esc(x.title) + '</b><small>' + esc(x.label) + (x.fs ? ' / full screen' : '') + (x.q ? ' / answer from the notification' : '') + '</small></span><span class="row-x">' + d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + hourLabel(d.getHours()) + '</span></div>';
+      }).join('') + '</div>' : '<p class="dim sm">Nothing queued. Today is done.</p>');
+    });
     main.addEventListener('click', youClick);
     document.title = 'You / Revision OS';
     return true;
@@ -516,7 +531,14 @@
     var a = b.dataset.a;
     if (a === 'haptics') { S.haptics = S.haptics === false; R.save(); R.haptic('good'); pageYou(); }
     else if (a === 'notify') { if (S.notify.on) { R.notify.disable(); pageYou(); } else R.notify.enable().then(function (r) { toast(r === 'granted' ? 'Reminders on' : r === 'granted-no-schedule' ? 'On. Install the app for daily reminders' : 'Notifications were not allowed'); pageYou(); }); }
-    else if (a === 'notify-test') { R.notify.test(); toast('Sent. Check your notifications'); }
+    else if (a === 'notify-test') { R.notify.test(); toast(R.native ? 'Coming in 5 seconds. Lock the phone to see it full screen' : 'Sent. Check your notifications'); }
+    else if (a === 'smart') { S.notify.smart = S.notify.smart === false; R.save(); pageYou(); }
+    else if (a === 'streaksave') { S.notify.streakSave = S.notify.streakSave === false; R.save(); pageYou(); }
+    else if (a === 'fullscreen') {
+      if (S.notify.full && R.notify.fullAllowed()) S.notify.full = false;
+      else { S.notify.full = true; if (!R.notify.fullAllowed()) { R.notify.requestFull(); toast('Allow it for Revision OS, then come back'); } }
+      R.save(); pageYou();
+    }
     else if (a === 'export') { var text = R.exportState(); box.innerHTML = '<textarea class="ta" rows="4" readonly>' + esc(text) + '</textarea>'; box.querySelector('textarea').select(); if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { toast('Backup copied'); }, function () {}); }
     else if (a === 'import') box.innerHTML = '<textarea class="ta" rows="4" placeholder="Paste a backup here"></textarea><p><button class="btn sm" data-a="do-import">Restore</button></p>';
     else if (a === 'do-import') { try { R.importState(box.querySelector('textarea').value); R.applyTheme(); toast('Restored'); pageYou(); chrome(); } catch (err) { box.insertAdjacentHTML('beforeend', '<p class="bad">That is not a valid backup.</p>'); } }
